@@ -35,6 +35,7 @@ const isLoginPage = computed(() => route.path === '/login');
 
 const logout = () => {
   localStorage.removeItem('token');
+  m_store.restaurantName = '';
   router.push('/login');
 };
 </script>

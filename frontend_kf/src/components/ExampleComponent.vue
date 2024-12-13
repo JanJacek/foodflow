@@ -1,6 +1,9 @@
 <template>
   <div class="flex justify-center items-stretch q-mt-xl q-pt-md">
-    <div class="flex justify-center" style="width: 500px">
+    <div v-if="isLoading" class="flex justify-center">
+      <q-spinner size="50px" color="primary" />
+    </div>
+    <div v-else class="flex justify-center" style="width: 500px">
       <q-card
         v-for="[key, item] in Object.entries(menu)"
         :key="key"
@@ -103,9 +106,8 @@
 </template>
 
 <script setup lang="ts">
-// import { useMainStore } from 'src/stores/mainStore';
-import { onMounted, ref, inject } from 'vue';
-import { Socket } from 'socket.io-client';
+import { onMounted, ref, } from 'vue';
+import { io, Socket } from 'socket.io-client';
 import { useMainStore } from 'src/stores/mainStore';
 
 type MenuItem = {
@@ -119,6 +121,8 @@ type MenuItemWithId = MenuItem & { id: number };
 const order = ref<Record<string, number>>({});
 const menu = ref<Record<string, MenuItem>>({});
 const mainStore = useMainStore();
+const isLoading = ref(true);
+let socket: Socket | null = null;
 
 const totalOrderPrice = () => {
   return Object.entries(order.value).reduce(
@@ -126,12 +130,43 @@ const totalOrderPrice = () => {
     0
   );
 };
-const socket = inject<Socket>('socket');
-const fetchProducts = () => {
-  const token = localStorage.getItem('token');
-  if (socket && token) {
-    socket.auth = { token: token }; // Przekaż token w auth handshake
-    socket.emit('get products', (products: MenuItemWithId[]) => {
+
+const initializeSocket = (token: string) => {
+  if (socket) {
+    socket.disconnect();
+  }
+  socket = io('http://localhost:3000', {
+    auth: { token: token }
+  });
+
+  socket.on('connect', () => {
+    console.log('Socket connected:', socket?.id);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected');
+  });
+};
+
+const fetchProducts = async () => {
+  let token = localStorage.getItem('token');
+  console.log('Token from localStorage:', token);
+
+  // Delay mechanism to wait for the token to be set in localStorage
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  if (!token) {
+    console.log('Token is missing, waiting for it to be set');
+    await delay(500); // Delay for 500ms
+    token = localStorage.getItem('token');
+    console.log('Token after waiting:', token);
+  }
+
+  if (token) {
+    initializeSocket(token);
+
+    socket?.emit('get products', (products: MenuItemWithId[]) => {
+      console.log('emited');
       if (products) {
         const menuItems: Record<string, MenuItem> = {};
         console.log(products);
@@ -139,12 +174,15 @@ const fetchProducts = () => {
           menuItems[product.id] = product;
         });
         menu.value = menuItems;
+        isLoading.value = false;
       } else {
         console.error('Failed to fetch products');
+        isLoading.value = false;
       }
     });
   } else {
-    console.error('Socket is not defined or token is missing');
+    console.error('Token is missing');
+    isLoading.value = false;
   }
 };
 
@@ -176,7 +214,7 @@ function placeOrder() {
   }
 }
 
-onMounted(() => {
-  fetchProducts();
+onMounted(async () => {
+  await fetchProducts();
 });
 </script>
