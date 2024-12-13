@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean
+name: Deploy via SSH
 
 on:
   push:
@@ -10,18 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Deploy using SSH
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: 22
-        script: |
-          cd kawaii_food
-          git pull origin dev
-          docker-compose down
-          docker-compose up -d --build
+      - name: SSH to server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.HOST }} # Adres IP serwera lub nazwa hosta
+          username: ${{ secrets.USERNAME }} # Użytkownik SSH (np. 'deploy')
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # Klucz prywatny SSH
+          passphrase: ${{ secrets.SSH_PASSPHRASE }} # (Opcjonalne) Hasło klucza
+          port: 22
+          script: |
+            echo "Deployment in progress"
+            # Twoje polecenia tutaj
