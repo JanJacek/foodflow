@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend_kf
+    command: yarn start
+    volumes:
+      - ./backend_kf:/app
+      - /app/node_modules
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend_kf/.env
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend_kf
+    command: yarn dev
+    volumes:
+      - ./frontend_kf:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: kawaii_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
